@@ -36,7 +36,7 @@ object WordCount2 {
 
       // Load the King James Version of the Bible, then convert
       // each line to lower case, creating an RDD.
-      val input = sc.textFile("data/kjvdat.txt").map(line => line.toLowerCase)
+      val input = sc.textFile("data/t3utf.dat").map(line => line.toLowerCase)  // use Hebrew Tanach
 
       // We could cache the RDD in memory for fast, repeated access, but
       // we don't have to do this here because we're only going to make one
