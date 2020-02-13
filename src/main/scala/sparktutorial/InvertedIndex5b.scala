@@ -77,12 +77,14 @@ object InvertedIndex5b {
         // RDD[(String, Iterable[(String,Int)]]
         // reformat the output; make a string of each group,
         // a sequence, "(path1, n1), (path2, n2), (path3, n3), ..."
-        .mapValues(iterator => iterator.mkString(", "))
+//        .mapValues(iterator => iterator.mkString(", "))
         // mapValues is like the following map, but more efficient, as we skip
         // pattern matching on the key ("word"), etc.
         // .map {
         //   case (word, iterator) => (word, iterator.mkString(", "))
         // }
+        .sortByKey()
+        .mapValues (iterator => iterator.toSeq.sortBy { case (path, n) => (-n, path) }.mkString(", "))
         .saveAsTextFile(out)
     } finally {
       // This is a good time to look at the web console again:
