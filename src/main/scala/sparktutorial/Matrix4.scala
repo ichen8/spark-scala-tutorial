@@ -63,8 +63,11 @@ object Matrix4 {
       val sums_avgs = sc.parallelize(1 to dimensions.n).map { i =>
         // Matrix indices count from 0.
         // "_ + _" is the same as "(count1, count2) => count1 + count2".
-        val sum = matrix(i-1) reduce (_ + _)
-        (sum, sum/dimensions.m)
+        val row = matrix(i-1)
+        val sum = row reduce (_ + _)
+        val mean = sum/dimensions.m
+        val stdDev = math.sqrt(row.map(x => x*x).reduce(_ + _)).toDouble
+        (sum, mean, stdDev)
       }.collect    // convert to an array
 
       // Make a new sequence of strings with the formatted output, then we'll
@@ -74,8 +77,8 @@ object Matrix4 {
       val outputLines = scala.collection.immutable.Vector(
         s"${dimensions.n}x${dimensions.m} Matrix:") ++
         sums_avgs.zipWithIndex.map {
-          case ((sum, avg), index) =>
-            f"Row #${index}%2d: Sum = ${sum}%4d, Avg = ${avg}%3d"
+          case ((sum, avg, stdDev), index) =>
+            f"Row #${index}%2d: Sum = ${sum}%4d, Avg = ${avg}%3d, StdDev = ${stdDev}%.2f"
         }
       val output = sc.makeRDD(outputLines)  // convert back to an RDD
       if (!quiet) println(s"Writing output to: $out")
