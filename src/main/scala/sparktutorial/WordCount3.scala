@@ -64,6 +64,8 @@ object WordCount3 {
       val wc1 = input
         .flatMap(line => line.split("""[^\p{IsAlphabetic}]+"""))
         .countByValue() // Returns a Map[T, Long] to the driver; no more RDD!
+        .map{ case (word, count) => (word, count, word.length)}
+        .toVector.sortBy{ case (_, _, length) => -length}
 
       // ... and convert back to an RDD for output, with one "slice".
       // First, convert to a comma-separated string. When you call "map" on
