@@ -83,6 +83,7 @@ object InvertedIndex5b {
         // .map {
         //   case (word, iterator) => (word, iterator.mkString(", "))
         // }
+        .sortByKey()
         .saveAsTextFile(out)
     } finally {
       // This is a good time to look at the web console again:
