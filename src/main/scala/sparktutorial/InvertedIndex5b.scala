@@ -49,40 +49,36 @@ object InvertedIndex5b {
 
       if (!quiet) println(s"Writing output to: $out")
 
-      // Start by splitting on non-alphabetical sequences of character as before.
-      input
+      val numDocuments = input.count
+      val tf = input
         .flatMap {
-          // all lines are two-tuples; extract the path and text into variables
-          // named "path" and "text".
           case (path, text) =>
-            // If we don't trim leading whitespace, the regex split creates
-            // an undesired leading "" word!
-            text.trim.split("""[^\p{IsAlphabetic}]+""").map(word => (word, path))
-        }  // RDD[(String,String)] of (word,path) pairs
+            val doc = text.trim.split("""[^\p{IsAlphabetic}]+""")
+            doc
+              .groupBy(words => words)
+              .mapValues(_.length)
+              .toSeq
+              .map{ case (word, count) => (word, (path, (count.toDouble/doc.length)))}
+        }
+
+      val idf = input
+          .flatMap {
+            case (path, text) =>
+              val doc = text.trim.split("""[^\p{IsAlphabetic}]+""")
+              doc
+                .toSet[String]
+                .map(word => (word, path))
+          }
+        .groupByKey()
         .map {
-          // We're going to use the (word, path) tuple as a key for counting
-          // all of them that are the same. So, create a new tuple with the
-          // pair as the key and an initial count of "1".
-          case (word, path) => ((word, path), 1)
-        }  // RDD[((String,String),Int)] of ((word,path),1) pairs
-        .reduceByKey {    // Count the equal (word, path) pairs, as before
-          (count1, count2) => count1 + count2
-        }  // RDD[((String,String),Int)], now with unique (word,path) and int value >= 1
-        // In the function passed to reduceByKey, we could use placeholder "_", one
-        // for each argument: .reduceByKey(_ + _)
-        .map {           // Rearrange the tuples; word is now the key we want.
-          case ((word, path), n) => (word, (path, n))
-        }  // RDD[(String,(String,Int))]
-        .groupByKey      // There is a also a more general groupBy
-        // RDD[(String, Iterable[(String,Int)]]
-        // reformat the output; make a string of each group,
-        // a sequence, "(path1, n1), (path2, n2), (path3, n3), ..."
-        .mapValues(iterator => iterator.mkString(", "))
-        // mapValues is like the following map, but more efficient, as we skip
-        // pattern matching on the key ("word"), etc.
-        // .map {
-        //   case (word, iterator) => (word, iterator.mkString(", "))
-        // }
+          case (word, path) => (word, Math.log(numDocuments/path.size))
+        }
+
+      tf.join(idf)
+        .map {
+          case (word, ((path, tfVal), idfVal)) =>
+            (word, (path, tfVal * idfVal))
+        }
         .saveAsTextFile(out)
     } finally {
       // This is a good time to look at the web console again:
