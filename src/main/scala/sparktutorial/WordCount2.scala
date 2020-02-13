@@ -60,6 +60,7 @@ object WordCount2 {
         .map(word => (word, 1))
         .reduceByKey((count1, count2) => count1 + count2)
         // .reduceByKey(_ + _)
+        .sortByKey(true)
 
       // Save, but it actually writes Hadoop-style output; to a directory,
       // with a _SUCCESS marker (empty) file, the data as a "part" file,
