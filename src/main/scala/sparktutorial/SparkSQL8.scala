@@ -1,4 +1,4 @@
-import util.{CommandLineOptions, FileUtil, Verse}
+import util.{Abbrev, CommandLineOptions, FileUtil, Verse}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -53,6 +53,10 @@ object SparkSQL8 {
           Console.err.println(s"Unexpected line: $line")
           Seq.empty[Verse]  // Will be eliminated by flattening.
       }
+      val namesRDD = sc.textFile("data/abbrevs-to-names.tsv").flatMap {
+        (x => Seq(Abbrev(x.split("\t")(0), x.substring(x.indexOf("\t")))))
+      }
+
 
       // Create a DataFrame and create as a temporary "view".
       // The following expression invokes several "implicit" conversions and
@@ -62,10 +66,14 @@ object SparkSQL8 {
       val verses = spark.createDataFrame(versesRDD)
       verses.createOrReplaceTempView("kjv_bible")
       verses.cache()
+      val names = spark.createDataFrame(namesRDD)
+      names.createOrReplaceTempView("abbrevs_to_names")
+      names.cache()
       // print the 1st 20 lines (default: pass another integer as the argument
       // to show() for a different number of lines).
       if (!quiet) {
         verses.show()
+        names.show()
       }
 
       import spark.sql    // Convenient for running SQL queries.
@@ -90,7 +98,11 @@ object SparkSQL8 {
       godVersesDF.rdd.saveAsTextFile(outgv)
 
       // Use GroupBy and column aliasing.
-      val counts = sql("SELECT book, COUNT(*) as count FROM kjv_bible GROUP BY book")
+      val counts = sql(
+        """
+          SELECT name, count FROM (SELECT book, COUNT(*) as count FROM kjv_bible GROUP BY book) kjv
+          JOIN abbrevs_to_names names ON kjv.book = names.abbrev
+        """)
       if (!quiet) {
         counts.show(100)  // print all the book counts
       }
