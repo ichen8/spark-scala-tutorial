@@ -47,7 +47,12 @@ println("Number of verses that mention God: "+godVersesDF.count())
 godVersesDF.show()
 
 // Use GroupBy and column aliasing.
-val counts = spark.sql("SELECT book, COUNT(*) as count FROM kjv_bible GROUP BY book")
+val counts = spark.sql(
+  """
+          SELECT name, count FROM (SELECT book, COUNT(*) as count FROM kjv_bible GROUP BY book) kjv
+          JOIN abbrevs_to_names names ON kjv.book = names.abbrev
+        """)
+//val counts = spark.sql("SELECT book, COUNT(*) as count FROM kjv_bible GROUP BY book")
 counts.show(100)  // print the 1st 100 lines, but there are only 66 books/records...
 
 // Exercise: Sort the output by the book names. Sort by the counts.
